@@ -467,8 +467,8 @@
 
     private async ValueTask SafeInvokeVoidAsync(string identifier, params object?[]? args)
     {
-        if (ScrollerModule is null)
-            return;
+        if (!_isDisposed && _scrollerModule is null)
+            throw new Exception("Scroller module not initialized");
         try
         {
             await ScrollerModule.InvokeVoidAsync(identifier, args);
@@ -483,17 +483,13 @@
 
     private async ValueTask<TValue?> SafeInvokeAsync<TValue>(string identifier, params object?[]? args)
     {
-        if (ScrollerModule is null)
-            return default;
+        if (!_isDisposed && _scrollerModule is null)
+            throw new Exception("Scroller module not initialized");
         try
         {
             return await ScrollerModule.InvokeAsync<TValue>(identifier, args);
         }
-        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
-        {
-            if (!_isDisposed && _scrollerModule is null)
-                throw;
-        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
         return default;
     }
 
