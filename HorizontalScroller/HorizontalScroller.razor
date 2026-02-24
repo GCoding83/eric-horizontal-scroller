@@ -161,6 +161,7 @@
     private bool _isDragging;
     private bool _preRenderMode;
     private bool _initialized;
+    private bool _isDisposed;
     private int? _realItemCount;
     private int _itemsPerSlide = 1;
     private double? _maxHeight;
@@ -224,21 +225,30 @@
 #else
         string moduleLocation = "./_content/BlazorHorizontalScroller/horizontalScroller.min.js" + "?v=" + (Assembly.GetAssembly(typeof(HorizontalScroller<string>))?.GetName().Version?.ToString() ?? "1");
 #endif
-        if (firstRender)
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+
+        if (_scrollerModule is null && !_isDisposed)
         {
-            _dotNetRef = DotNetObjectReference.Create(this);
-            _scrollerModule = await Js.InvokeAsync<IJSObjectReference>("import", moduleLocation );
-            if (_scrollerModule != null)
+            try
             {
-                await _scrollerModule.InvokeVoidAsync("initBhs", _scrollerRef, _dotNetRef, new
+                _scrollerModule = await Js.InvokeAsync<IJSObjectReference>("import", moduleLocation);
+                if (_scrollerModule != null && !_isDisposed) // Navigation might have happened while we were waiting for the import above, which is why we once again check for disposal.
                 {
-                    startIndex = SelectedIndex,
-                    inertiaDecay = (InertiaDecay),
-                    enableSnapping = EnableSnapping,
-                    enableDrag = EnableDrag,
-                    log = LogToConsole
-                });
-                _initialized = true;
+                    await _scrollerModule.InvokeVoidAsync("initBhs", _scrollerRef, _dotNetRef, new
+                    {
+                        startIndex = SelectedIndex,
+                        inertiaDecay = (InertiaDecay),
+                        enableSnapping = EnableSnapping,
+                        enableDrag = EnableDrag,
+                        log = LogToConsole
+                    });
+                    _initialized = true;
+                }
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore: The user navigated away/closed the tab during the import.
+                return;
             }
         }
         if (_goToIndexAfterRender.HasValue)
@@ -462,6 +472,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _isDisposed = true;
         try
         {
             if (_scrollerModule != null)
