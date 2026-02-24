@@ -249,11 +249,11 @@
 
     private async Task InitModule()
     {
-        #if DEBUG
+#if DEBUG
         string moduleLocation = "./_content/BlazorHorizontalScroller/horizontalScroller.js";
-        #else
-                string moduleLocation = "./_content/BlazorHorizontalScroller/horizontalScroller.min.js" + "?v=" + (Assembly.GetAssembly(typeof(HorizontalScroller<string>))?.GetName().Version?.ToString() ?? "1");
-        #endif
+#else
+        string moduleLocation = "./_content/BlazorHorizontalScroller/horizontalScroller.min.js" + "?v=" + (Assembly.GetAssembly(typeof(HorizontalScroller<string>))?.GetName().Version?.ToString() ?? "1");
+#endif
 
         if (_scrollerModule is not null || _isDisposed)
             return;
@@ -291,16 +291,9 @@
     /// <returns></returns>
     public async Task SyncWidth()
     {
-        try
-        {
-            if (ScrollerModule != null && (UseRelativeWidth()))
-                _widthInfo = await SafeInvokeAsync<WidthInfo>("getSizeInfo", _scrollerRef);
-            FullWidthChanged();
-        }
-        catch (ObjectDisposedException e)
-        {
-            LogMessage("Cannot sync width, object disposed");
-        }
+        if (ScrollerModule != null && (UseRelativeWidth()))
+            _widthInfo = await SafeInvokeAsync<WidthInfo>("getSizeInfo", _scrollerRef);
+        FullWidthChanged();
     }
 
     private async Task OnMouseDown(MouseEventArgs e)
@@ -480,7 +473,7 @@
         {
             await ScrollerModule.InvokeVoidAsync(identifier, args);
         }
-        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException) { }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
     }
 
 
@@ -492,7 +485,7 @@
         {
             return await ScrollerModule.InvokeAsync<TValue>(identifier, args);
         }
-        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException) { }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
         return default;
     }
 
